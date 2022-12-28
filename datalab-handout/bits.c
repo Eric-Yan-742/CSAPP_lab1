@@ -157,8 +157,8 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
+  int tmin = 1;
+  return tmin << 31;
 
 }
 //2
@@ -170,7 +170,10 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+  x = ~x;
+  /* The negate of the complement of Tmax (1000...000) equal to itself */
+  /* But the negate of 0 is also itself. Use (!!x) to exclude case of 0 */
+  return !(x ^ (~x + 1)) & !!x;
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
