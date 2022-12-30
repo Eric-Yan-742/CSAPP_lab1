@@ -1,3 +1,4 @@
+#include <limits.h>
 /* 
  * CS:APP Data Lab 
  * 
@@ -183,8 +184,13 @@ int isTmax(int x) {
  *   Max ops: 12
  *   Rating: 2
  */
+#define equal(x, y) (!((x) ^ (y)))
 int allOddBits(int x) {
-  return 2;
+  /* Create a mask of 0xAAAAAAAA */
+  unsigned mask = 0xAA + (0xAA << 8);
+  mask = mask + (mask << 16);
+  /* Number with all odd-numbered bits equal to 1 & mask will be equal to mask */
+  return equal(x & mask, mask);
 }
 /* 
  * negate - return -x 
@@ -194,7 +200,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
@@ -207,7 +213,7 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  return !((x >> 4) ^ 0x3) & !!(((x & 0xf) + (~0xA + 1)) & (1 << 31));
 }
 /* 
  * conditional - same as x ? y : z 
@@ -217,7 +223,26 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  /* Convert x to boolean value */
+  int toBool = !!x;
+  /* Get the negate of toBool */
+  int negate = ~toBool + 1;
+  /* Bit pattern of (-1): 111...111 */
+  /* Bit pattern of (-0): 000...000 */
+  return (negate & y) | (~negate & z);
+}
+/*
+ * Helper Method less
+ * Return 1 if x < y, otherwise return 0
+*/
+inline static int less(int x, int y)
+{
+  #define flagx ((x & (1 << 31)))  
+  #define flagy ((y & (1 << 31)))
+  #define notE (flagx ^ flagy) 
+  #define toBool(x) (!!(x))
+  #define less_positive(x, y) (toBool((((x) + negate(y)) & (1 << 31))))
+  return conditional(notE, (flagx >> 31) & 1, less_positive(x, y));
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -227,7 +252,7 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  return (!(x ^ y)) | less(x, y);
 }
 //4
 /* 
@@ -239,7 +264,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  return ((x | (~x + 1)) >> 31) + 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -254,7 +279,39 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  /* Ultimate goal: get x's highest bit of 1 */
+
+  /* Get the complement of x if x is less than 0 */
+  /* To unify the way we get the number of bits of positive number and negative number*/
+  x = conditional((x >> 31), ~x, x);
+
+  int bit_16 = 0, bit_8 = 0, bit_4 = 0, bit_2 = 0, bit_1 = 0, bit_0 = 0;
+  /* Similar to binary search */
+  
+  /* Check whether higher 16 bits of x have 1 */
+  /* if higher 16 bits have 1, discard lower 16 bits*/
+  /* (Check 1 in the higher 16 bits later)*/
+  /* If higher 16 bits don't have 1, discard higher 16 bits*/
+  /* (Check 1 in the lower 16 bits later) */
+  bit_16 = toBool(x >> 16) << 4;
+  x >>= bit_16;
+  
+  /* Vice versa for the following */
+  bit_8 = toBool(x >> 8) << 3;
+  x >>= bit_8;
+
+  bit_4 = toBool(x >> 4) << 2;
+  x >>= bit_4;
+
+  bit_2 = toBool(x >> 2) << 1;
+  x >>= bit_2;
+
+  bit_1 = toBool(x >> 1) << 0;
+  x >>= bit_1;
+
+  bit_0 = toBool(x);
+
+  return bit_16 + bit_8 + bit_4 + bit_2 + bit_1 + bit_0 + 1; 
 }
 //float
 /* 
