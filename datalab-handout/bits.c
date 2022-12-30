@@ -1,4 +1,3 @@
-#include <limits.h>
 /* 
  * CS:APP Data Lab 
  * 
@@ -326,7 +325,24 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  /* Cut the float pattern into 3 parts */  
+  unsigned s = uf >> 31;
+  unsigned exp = (uf << 1) >> 24;
+  unsigned frac = (uf << 9) >> 9;
+  /* uf == NaN */
+  if(equal(exp, 0xFF)) {
+    return uf;
+  }
+  /* exp == 0 && frac == 0 */
+  if(equal(exp, 0) && equal(frac, 0)) {
+    return uf;
+  }
+  /* exp == 0 && frac != 0 (Denormalized) */
+  if(equal(exp, 0)) {
+    return (s << 31) + (frac << 1);
+  }
+  /* exp != 0 (Normalized) */
+  return (s << 31) + ((exp + 1) << 23) + frac;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -341,7 +357,36 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  unsigned s = uf >> 31;
+  unsigned e = (uf << 1) >> 24;
+  unsigned frac = (uf << 9) >> 9;
+  if(equal(e, 0xFF)) {
+    return (1 << 31);
+  }
+  if(equal(e, 0)) {
+    return 0;
+  }
+
+  /* Normalized */
+  int exponent = e - 127;
+  frac = frac | (1 << 23); //add implicit leading 1
+  if(exponent > 30) { //if overflow
+    return (1 << 31);
+  } 
+  if(exponent < 0) {
+    return 0;
+  }
+
+  if(exponent >= 23) {
+    frac <<= exponent - 23; //if exponent >= 23, expand frac
+  } else {
+    frac >>= 23 - exponent; //if exponent < 23, cut frac
+  }
+
+  if(s) {
+    return ~frac + 1;
+  }
+  return frac;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -357,5 +402,28 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+  /* The only method I figure out completely by myself :) */
+  int exponent = x;
+  /* If too small, return 0 */
+  if(exponent < -149) {
+    return 0;
+  }
+  /* If too large, return +INF */
+  if(exponent > 127) {
+    return (0xFF << 23);
+  }
+  unsigned s = (x >> 31) & 1;
+  unsigned frac = 0;
+  unsigned e = 0;
+  /* Denormalized */
+  if(exponent >= -149 && exponent <= -127) {
+    e = 0;
+    frac = 1 << (149 + x);
+  }
+  /* Normalized */
+  if(exponent >= -126) {
+    frac = 0;
+    e = exponent + 127;
+  }
+  return (s << 31) + (e << 23) + frac;
 }
